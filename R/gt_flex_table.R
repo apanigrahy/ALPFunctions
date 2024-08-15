@@ -43,10 +43,62 @@ gt_flex_table <- function(data_frame,
   if(length(value_list) == 0){
     value_list <- NULL
   }
+
+  # Append digist_list if applicable
+  digits <- list(all_continuous2() ~ 1)
+  digits_list <- c(digits, digits_list)
+
   # Append type_list if applicable
   types <- list(all_continuous() ~ "continuous2",
                 all_dichotomous() ~ "categorical")
   type_list <- c(types, type_list)
+
+
+  # Replace all NA's for character and factors with "N Missing %"
+  for (a in colnames(data_frame)) {
+    # Check if variable is character or factor
+    if (is.character(data_frame[[a]]) |
+      is.factor(data_frame[[a]])) {
+      # Count number rows with missing data
+      num_missing <- data_frame %>%
+        dplyr::filter(is.na(!!sym(a)))
+      # If any rows are missing data
+      if (nrow(num_missing) >= 1) {
+        # If character variable, pull unique characters as levels,
+        # replace NA's, convert variable to factor with those levels and
+        # include N Missing
+        if (is.character(data_frame[[a]])) {
+          levels_before <- data_frame %>%
+            dplyr::filter(!is.na(!!sym(a))) %>%
+            dplyr::count(!!sym(a)) %>%
+            dplyr::arrange(!!sym(a)) %>%
+            pull(!!sym(a))
+          data_frame <- data_frame %>%
+            dplyr::mutate(!!sym(a) := str_replace_na(.[[a]], "N Missing (%)")) %>%
+            dplyr::mutate(!!sym(a) := factor(!!sym(a),
+              levels = c(levels_before, "N Missing (%)")
+            ))
+          rm(levels_before)
+        # If already a factor variable, replace NA's and add factor levels back
+        # with missing added
+        } else if (is.factor(data_frame[[a]])) {
+          levels_before <- levels(data_frame[[a]])
+          data_frame <- data_frame %>%
+            dplyr::mutate(!!sym(a) := str_replace_na(.[[a]], "N Missing (%)")) %>%
+            dplyr::mutate(!!sym(a) := factor(!!sym(a),
+              levels = c(levels_before, "N Missing (%)")
+            ))
+          rm(levels_before)
+        }
+      } else {
+        if (is.character(data_frame[[a]])) {
+          data_frame <- data_frame %>%
+            dplyr::mutate(!!sym(a) := as.factor(!!sym(a)))
+        }
+      }
+    }
+  }
+  rm(a)
 
   # Create initial gtsummary table
   gt_tbl <- data_frame %>%
@@ -55,6 +107,7 @@ gt_flex_table <- function(data_frame,
       type = type_list,
       label = label_list,
       value = value_list,
+      digits = digits_list,
       statistic = list(all_continuous() ~ c("{mean} ({sd})",
                                             "{median} ({p25}-{p75})",
                                             "{min}-{max}"),
