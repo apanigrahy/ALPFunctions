@@ -3,31 +3,41 @@
 #' @description
 #' This function utilizes the gtsummary tbl_summary function to summarize data
 #' with custom settings and inputs and can output a flextable object with custom
-#' inputs for rendering Rmarkdown word, powerpoint, or html reports
+#' inputs for rendering Rmarkdown word or html reports
 #'
 #'
-#' @param data_frame
-#' @param group_by
-#' @param label_list
-#' @param digits_list
-#' @param value_list
-#' @param type_list
-#' @param add_p
-#' @param add_total_col
-#' @param header_text
-#' @param return_object
+#' @param data_frame A dataframe object
+#' @param group_by A categorical variable to group the table by
+#' @param label_list A list object to specify for variable labels
+#' @param digits_list A list object to specify for digits lengths
+#' @param value_list A list object to specify summary statistics and values
+#' @param type_list A list object to specify variable types
+#' @param add_p If TRUE, adds statistic p-values
+#' @param add_p_test If not NULL, specify the test statistic type
+#' @param add_p_test_args If not NULL, specify test statistic arguments
+#' @param add_p_group If not NULL, specify the variable used for ID grouping for paired data
+#' @param add_total_col If TRUE, adds the totals for all columns
+#' @param header_text Specify header
+#' @param return_object Specifies what object
 #'
-#' @return
-#' @export
+#' @import gtsummary
+#' @import flextable
+#' @importFrom dplyr arrange case_when count filter mutate pull
+#' @importFrom magrittr %>%
 #'
-#' @examples
+#' @return Returns a flextable or gtsummary table object
+#'
 gt_flex_table <- function(data_frame,
                           group_by = NULL,
                           label_list = list(),
                           digits_list = list(),
                           value_list = list(),
                           type_list = list(),
+                          include = everything(),
                           add_p = FALSE,
+                          add_p_test = NULL,
+                          add_p_test_args = NULL,
+                          add_p_group = NULL,
                           add_total_col = FALSE,
                           header_text = "**Table 1: Insert Table Title**",
                           return_object = "flextable"){
@@ -72,7 +82,7 @@ gt_flex_table <- function(data_frame,
             dplyr::filter(!is.na(!!sym(a))) %>%
             dplyr::count(!!sym(a)) %>%
             dplyr::arrange(!!sym(a)) %>%
-            pull(!!sym(a))
+            dplyr::pull(!!sym(a))
           data_frame <- data_frame %>%
             dplyr::mutate(!!sym(a) := str_replace_na(.[[a]], "N Missing (%)")) %>%
             dplyr::mutate(!!sym(a) := factor(!!sym(a),
@@ -108,6 +118,7 @@ gt_flex_table <- function(data_frame,
       label = label_list,
       value = value_list,
       digits = digits_list,
+      include = {{include}},
       statistic = list(all_continuous() ~ c("{mean} ({sd})",
                                             "{median} ({p25}-{p75})",
                                             "{min}-{max}"),
@@ -115,10 +126,25 @@ gt_flex_table <- function(data_frame,
       missing_text = "N Missing (%)",
       missing_stat = "{N_miss} ({p_miss}%)"
     )
+  # Create function to format p-values
+  format_p_value <- function(p) {
+    dplyr::case_when(
+      is.na(p) ~ " ",
+      p < 0.0001 ~ "<0.0001",
+      p > 0.9999 ~ ">0.9999",
+      TRUE ~ sprintf("%.4f", p) # Display p-values with 4 digits
+    )
+  }
+
   # Add statistics with p-values if applicable
   if(add_p == TRUE){
     gt_tbl <- gt_tbl %>%
-      gtsummary::add_p()
+      gtsummary::add_p(
+        test = add_p_test,
+        test.args = add_p_test_args,
+        group = {{add_p_group}},
+        pvalue_fun = format_p_value
+      )
   }
   # Add overall column if applicable
   if(add_total_col == TRUE){
