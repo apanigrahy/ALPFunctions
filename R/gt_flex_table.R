@@ -23,10 +23,11 @@
 #' @import gtsummary
 #' @import flextable
 #' @importFrom dplyr arrange case_when count filter mutate pull
+#' @importFrom stringr str_replace_na
 #' @importFrom magrittr %>%
 #'
 #' @return Returns a flextable or gtsummary table object
-#'
+#' @export
 gt_flex_table <- function(data_frame,
                           group_by = NULL,
                           label_list = list(),
@@ -71,7 +72,7 @@ gt_flex_table <- function(data_frame,
       is.factor(data_frame[[a]])) {
       # Count number rows with missing data
       num_missing <- data_frame %>%
-        dplyr::filter(is.na(!!sym(a)))
+        dplyr::filter(is.na(!!rlang::sym(a)))
       # If any rows are missing data
       if (nrow(num_missing) >= 1) {
         # If character variable, pull unique characters as levels,
@@ -79,13 +80,13 @@ gt_flex_table <- function(data_frame,
         # include N Missing
         if (is.character(data_frame[[a]])) {
           levels_before <- data_frame %>%
-            dplyr::filter(!is.na(!!sym(a))) %>%
-            dplyr::count(!!sym(a)) %>%
-            dplyr::arrange(!!sym(a)) %>%
-            dplyr::pull(!!sym(a))
+            dplyr::filter(!is.na(!!rlang::sym(a))) %>%
+            dplyr::count(!!rlang::sym(a)) %>%
+            dplyr::arrange(!!rlang::sym(a)) %>%
+            dplyr::pull(!!rlang::sym(a))
           data_frame <- data_frame %>%
-            dplyr::mutate(!!sym(a) := str_replace_na(.[[a]], "N Missing (%)")) %>%
-            dplyr::mutate(!!sym(a) := factor(!!sym(a),
+            dplyr::mutate(!!rlang::sym(a) := stringr::str_replace_na(.[[a]], "N Missing (%)")) %>%
+            dplyr::mutate(!!rlang::sym(a) := factor(!!rlang::sym(a),
               levels = c(levels_before, "N Missing (%)")
             ))
           rm(levels_before)
@@ -94,8 +95,8 @@ gt_flex_table <- function(data_frame,
         } else if (is.factor(data_frame[[a]])) {
           levels_before <- levels(data_frame[[a]])
           data_frame <- data_frame %>%
-            dplyr::mutate(!!sym(a) := str_replace_na(.[[a]], "N Missing (%)")) %>%
-            dplyr::mutate(!!sym(a) := factor(!!sym(a),
+            dplyr::mutate(!!rlang::sym(a) := stringr::str_replace_na(.[[a]], "N Missing (%)")) %>%
+            dplyr::mutate(!!rlang::sym(a) := factor(!!rlang::sym(a),
               levels = c(levels_before, "N Missing (%)")
             ))
           rm(levels_before)
@@ -103,7 +104,7 @@ gt_flex_table <- function(data_frame,
       } else {
         if (is.character(data_frame[[a]])) {
           data_frame <- data_frame %>%
-            dplyr::mutate(!!sym(a) := as.factor(!!sym(a)))
+            dplyr::mutate(!!rlang::sym(a) := as.factor(!!rlang::sym(a)))
         }
       }
     }
@@ -168,13 +169,14 @@ gt_flex_table <- function(data_frame,
 
   # Create and return flextable object if applicable
   if(return_object == "flextable"){
+    cols <- ncol(gt_tbl)
     tbl_flx <- gt_tbl %>% gtsummary::as_flex_table()
     tbl_flx <- tbl_flx %>%
       flextable::hline_top(border = fp_border_default(width = 0),
                            part = "header")  %>%
       flextable::align(align = "center", part = "header") %>%
       flextable::align(align = "center", part = "body",
-                       j = c(2:length(cols))) %>%
+                       j = c(2:ncol(tbl_flx$header$dataset))) %>%
       flextable::align(align = "left", part = "body", j = 1) %>%
       flextable::font(fontname = "Albany AMT", part = "all") %>%
       flextable::fontsize(size = 12, part = "header") %>%
