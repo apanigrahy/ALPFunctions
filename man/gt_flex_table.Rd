@@ -18,7 +18,11 @@ gt_flex_table(
   add_p_group = NULL,
   add_total_col = FALSE,
   header_text = "**Table 1: Insert Table Title**",
-  return_object = "flextable"
+  return_object = "flextable",
+  font_name = "Albany AMT",
+  font_size_header = 12,
+  font_size_body = 10,
+  font_size_footer = 10
 )
 }
 \arguments{
@@ -47,6 +51,18 @@ gt_flex_table(
 \item{header_text}{Specify header}
 
 \item{return_object}{Specifies what object}
+
+\item{font_name}{A character string to specify the font type for the
+flextable, defaults to "Albany AMT"}
+
+\item{font_size_header}{A numeric value to specify the font size for the
+table header for the flextable, defaults to 12}
+
+\item{font_size_body}{A numeric value to specify the font size for the
+table body for the flextable, defaults to 10}
+
+\item{font_size_footer}{A numeric value to specify the font size for the
+table footer for the flextable, defaults to 10}
 }
 \value{
 Returns a flextable or gtsummary table object

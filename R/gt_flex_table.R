@@ -19,9 +19,16 @@
 #' @param add_total_col If TRUE, adds the totals for all columns
 #' @param header_text Specify header
 #' @param return_object Specifies what object
+#' @param font_name A character string to specify the font type for the
+#' flextable, defaults to "Albany AMT"
+#' @param font_size_header A numeric value to specify the font size for the
+#' table header for the flextable, defaults to 12
+#' @param font_size_body A numeric value to specify the font size for the
+#' table body for the flextable, defaults to 10
+#' @param font_size_footer A numeric value to specify the font size for the
+#' table footer for the flextable, defaults to 10
 #'
 #' @import gtsummary
-#' @import flextable
 #' @importFrom dplyr arrange case_when count filter mutate pull
 #' @importFrom stringr str_replace_na
 #' @importFrom magrittr %>%
@@ -41,7 +48,11 @@ gt_flex_table <- function(data_frame,
                           add_p_group = NULL,
                           add_total_col = FALSE,
                           header_text = "**Table 1: Insert Table Title**",
-                          return_object = "flextable"){
+                          return_object = "flextable",
+                          font_name = "Albany AMT",
+                          font_size_header = 12,
+                          font_size_body = 10,
+                          font_size_footer = 10){
   # If label_list is empty, set to NULL
   if(length(label_list) == 0){
     label_list <- NULL
@@ -169,19 +180,11 @@ gt_flex_table <- function(data_frame,
 
   # Create and return flextable object if applicable
   if(return_object == "flextable"){
-    cols <- ncol(gt_tbl)
-    tbl_flx <- gt_tbl %>% gtsummary::as_flex_table()
-    tbl_flx <- tbl_flx %>%
-      flextable::hline_top(border = fp_border_default(width = 0),
-                           part = "header")  %>%
-      flextable::align(align = "center", part = "header") %>%
-      flextable::align(align = "center", part = "body",
-                       j = c(2:ncol(tbl_flx$header$dataset))) %>%
-      flextable::align(align = "left", part = "body", j = 1) %>%
-      flextable::font(fontname = "Albany AMT", part = "all") %>%
-      flextable::fontsize(size = 12, part = "header") %>%
-      flextable::fontsize(size = 10, part = "body") %>%
-      flextable::fontsize(size = 10, part = "footer")
+    tbl_flx <- gt_to_flex_convert(gt_tbl,
+                                  font_name = font_name,
+                                  font_size_header = font_size_header,
+                                  font_size_body = font_size_body,
+                                  font_size_footer = font_size_footer)
     return(tbl_flx)
   }else{
     return(gt_tbl)
